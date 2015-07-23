@@ -1,0 +1,103 @@
+	//Gets a single Parse Object from Parse based on a passed in Object ID value
+	//currentObject was originally a global variable. It is not needed due to changing
+	//The return type but I left it for convenience.
+	public ParseObject getParseObject(String objectID) throws ParseException
+	{
+		ParseQuery<ParseObject> query = ParseQuery.getQuery("Gladiator");
+
+		try
+		{
+			currentObject = query.get(objectID);
+			return currentObject;
+		}
+
+		catch (com.parse.ParseException e)
+		{
+			Log.d("Error", "Did not find Parse Object");
+		}
+	}
+
+	//Returns a GameMaster object that has room for a new player to join
+	//TODO: Test functionality
+	public ParseObject joinMatchParse(String gladID)
+	{
+		ParseQuery<ParseObject> query = ParseQuery.getQuery("GameMaster");
+		query.whereEqualTo("isFull", false);
+		query.findInBackground(new FindCallback<ParseObject>() {
+			@Override
+			public void done(List<ParseObject> o, com.parse.ParseException e) {
+				if (e == null) {
+					for (ParseObject po : o) {
+
+						gameMasterList.add(po);
+
+					}
+				} else {
+					Log.d("MyLog", e.getMessage());
+				}
+			}
+		});
+
+		if(gameMasterList.isEmpty())
+		{
+			return null;
+		}
+
+		else
+		{
+			return gameMasterList.get(0);
+		}
+	}
+
+	//Creates a new GameMaster Object and saves it to Parse
+	//TODO: Need to finalize initialization values and check if the game is FULL
+	public void createMatch(String gladID) throws ParseException {
+		ParseObject newMap = new ParseObject("Map");
+		newMap.put("objectID", "777");
+		newMap.saveInBackground();
+
+		ParseObject addGlad;
+		addGlad = getParseObject(gladID);
+
+		ParseObject match = new ParseObject("GameMaster");
+		match.put("objectId", gladID);
+		match.put("isFalse", false);
+
+		//Gladiators is an array in the GameMaster object. This might not work
+		match.add("Gladiators", addGlad);
+
+		//Owner
+
+		match.put("MapId", "777");
+
+		if(match.get)
+		match.saveInBackground();
+	}
+
+	//Grabs a JSONArray from the Cell field of a Map
+	//Checks if the specified X and Y position are occupied
+	//TODO: Need to determine how we get a 2D Positional value from a JSONArray
+	public boolean isCellOccupied(int x, int y, String mapID) throws ParseException {
+
+		ParseObject currentMap;
+		currentMap = getParseObject(mapID);
+
+		//Need JSONArray to handle the cells
+		JSONArray cellArray = currentMap.getJSONArray("Cell");
+
+		if(cellArray[x][y] == null)
+		{
+			return false;
+		}
+
+		else
+		{
+			return true;
+		}
+	}
+
+	//Updates the passed in Parse object and saves it on the Parse cloud
+	public void update(ParseObject newPO)
+	{
+		newPO.saveInBackground();
+	}
