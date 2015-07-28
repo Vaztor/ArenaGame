@@ -1,51 +1,68 @@
 	//Gets a single Parse Object from Parse based on a passed in Object ID value
 	//currentObject was originally a global variable. It is not needed due to changing
 	//The return type but I left it for convenience.
-	public ParseObject getParseObject(String objectID) throws ParseException
-	{
+	public ParseObject getParseObject(String objectID) throws ParseException {
 		ParseQuery<ParseObject> query = ParseQuery.getQuery("Gladiator");
 
-		try
-		{
+		try {
 			currentObject = query.get(objectID);
 			return currentObject;
-		}
-
-		catch (com.parse.ParseException e)
-		{
+		} catch (com.parse.ParseException e) {
 			Log.d("Error", "Did not find Parse Object");
 		}
+
+		return null;
 	}
 
 	//Returns a GameMaster object that has room for a new player to join
 	//TODO: Test functionality
-	public ParseObject joinMatchParse(String gladID)
-	{
+	public ParseObject joinMatchParse(String gladID) throws ParseException, com.parse.ParseException {
 		ParseQuery<ParseObject> query = ParseQuery.getQuery("GameMaster");
 		query.whereEqualTo("isFull", false);
-		query.findInBackground(new FindCallback<ParseObject>() {
-			@Override
-			public void done(List<ParseObject> o, com.parse.ParseException e) {
-				if (e == null) {
-					for (ParseObject po : o) {
+		List<ParseObject> gameList = query.find();
 
-						gameMasterList.add(po);
+			//query.findInBackground(new FindCallback<ParseObject>() {
+//				@Override
+//				public void done(List<ParseObject> o, com.parse.ParseException e) {
+//					if (e == null) {
+//						for (ParseObject po : o) {
+//							gameMasterList.add(po);
+//						}
+//
+//						qFlag = true;
+//
+//					} else {
+//
+//						qFlag = true;
+//						Log.d("MyLog", e.getMessage());
+//					}
+//				}
+//			});
 
-					}
-				} else {
-					Log.d("MyLog", e.getMessage());
-				}
-			}
-		});
+		ParseObject selectedGame = gameList.get(0);
 
-		if(gameMasterList.isEmpty())
-		{
+		if (gameList.isEmpty()) {
+			Log.d("NoMatchFound", "No empty matches were found");
 			return null;
-		}
 
-		else
-		{
-			return gameMasterList.get(0);
+		} else {
+			Log.d("MatchFound", "!!!");
+			int currentPlayerNumber = gameList.get(0).getInt("players");
+
+			ParseObject addGlad = getParseObject(gladID);
+			gameList.get(0).add("Gladiators", addGlad);
+			currentPlayerNumber++;
+			Log.d("PlayerTotal", Integer.toString(currentPlayerNumber));
+
+			gameList.get(0).put("players", currentPlayerNumber);
+
+			if (currentPlayerNumber == 2) {
+				gameList.get(0).put("isFull", true);
+			}
+
+			update(gameList.get(0));
+
+			return gameList.get(0);
 		}
 	}
 
@@ -53,25 +70,28 @@
 	//TODO: Need to finalize initialization values and check if the game is FULL
 	public void createMatch(String gladID) throws ParseException {
 		ParseObject newMap = new ParseObject("Map");
+
+		//Temporary default value
 		newMap.put("objectID", "777");
-		newMap.saveInBackground();
+		update(newMap);
 
 		ParseObject addGlad;
 		addGlad = getParseObject(gladID);
 
 		ParseObject match = new ParseObject("GameMaster");
-		match.put("objectId", gladID);
 		match.put("isFalse", false);
+		match.put("isFull", false);
+		match.put("players", 0);
 
 		//Gladiators is an array in the GameMaster object. This might not work
 		match.add("Gladiators", addGlad);
 
 		//Owner
 
+		//Temporary input value
 		match.put("MapId", "777");
 
-		if(match.get)
-		match.saveInBackground();
+		update(match);
 	}
 
 	//Grabs a JSONArray from the Cell field of a Map
@@ -85,6 +105,7 @@
 		//Need JSONArray to handle the cells
 		JSONArray cellArray = currentMap.getJSONArray("Cell");
 
+		/*
 		if(cellArray[x][y] == null)
 		{
 			return false;
@@ -93,7 +114,10 @@
 		else
 		{
 			return true;
-		}
+		}*/
+
+		return true;
+
 	}
 
 	//Updates the passed in Parse object and saves it on the Parse cloud
