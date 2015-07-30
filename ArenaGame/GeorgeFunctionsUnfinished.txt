@@ -1,4 +1,4 @@
-	//Gets a single Parse Object from Parse based on a passed in Object ID value
+//Gets a single Parse Object from Parse based on a passed in Object ID value
 	//currentObject was originally a global variable. It is not needed due to changing
 	//The return type but I left it for convenience.
 	public ParseObject getParseObject(String objectID) throws ParseException {
@@ -15,29 +15,11 @@
 	}
 
 	//Returns a GameMaster object that has room for a new player to join
-	//TODO: Test functionality
+	//Gathers a list of currently open matches from Parse and then joins the passed in Gladiator to the game. It increments the player counter and determines if the Match is full or not.
 	public ParseObject joinMatchParse(String gladID) throws ParseException, com.parse.ParseException {
 		ParseQuery<ParseObject> query = ParseQuery.getQuery("GameMaster");
 		query.whereEqualTo("isFull", false);
 		List<ParseObject> gameList = query.find();
-
-			//query.findInBackground(new FindCallback<ParseObject>() {
-//				@Override
-//				public void done(List<ParseObject> o, com.parse.ParseException e) {
-//					if (e == null) {
-//						for (ParseObject po : o) {
-//							gameMasterList.add(po);
-//						}
-//
-//						qFlag = true;
-//
-//					} else {
-//
-//						qFlag = true;
-//						Log.d("MyLog", e.getMessage());
-//					}
-//				}
-//			});
 
 		ParseObject selectedGame = gameList.get(0);
 
@@ -47,27 +29,30 @@
 
 		} else {
 			Log.d("MatchFound", "!!!");
-			int currentPlayerNumber = gameList.get(0).getInt("players");
+			int currentPlayerNumber = selectedGame.getInt("players");
 
 			ParseObject addGlad = getParseObject(gladID);
-			gameList.get(0).add("Gladiators", addGlad);
+			selectedGame.add("Gladiators", addGlad);
 			currentPlayerNumber++;
 			Log.d("PlayerTotal", Integer.toString(currentPlayerNumber));
 
-			gameList.get(0).put("players", currentPlayerNumber);
+			selectedGame.put("players", currentPlayerNumber);
 
-			if (currentPlayerNumber == 2) {
-				gameList.get(0).put("isFull", true);
+			if (currentPlayerNumber == 2)
+			{
+				Log.d("GameFull", "The Game Is Full!");
+				selectedGame.put("isFull", true);
 			}
 
-			update(gameList.get(0));
+			update(selectedGame);
 
-			return gameList.get(0);
+			return selectedGame;
 		}
 	}
 
-	//Creates a new GameMaster Object and saves it to Parse
-	//TODO: Need to finalize initialization values and check if the game is FULL
+	//Creates a new map and a new GameMaster Object and saves it to Parse
+	//Make sure the ACL Public access is set otherwise you can not update match objects later
+	//The map and mapID stuff is temporary default values. Handle this however we decide to do this.
 	public void createMatch(String gladID) throws ParseException {
 		ParseObject newMap = new ParseObject("Map");
 
@@ -81,7 +66,7 @@
 		ParseObject match = new ParseObject("GameMaster");
 		match.put("isFalse", false);
 		match.put("isFull", false);
-		match.put("players", 0);
+		match.put("players", 1);
 
 		//Gladiators is an array in the GameMaster object. This might not work
 		match.add("Gladiators", addGlad);
@@ -91,12 +76,18 @@
 		//Temporary input value
 		match.put("MapId", "777");
 
+		ParseACL postACL = new ParseACL(ParseUser.getCurrentUser());
+		postACL.setPublicReadAccess(true);
+		postACL.setPublicWriteAccess(true);
+		match.setACL(postACL);
+
 		update(match);
+
 	}
 
 	//Grabs a JSONArray from the Cell field of a Map
 	//Checks if the specified X and Y position are occupied
-	//TODO: Need to determine how we get a 2D Positional value from a JSONArray
+	//TODO: This is not finished. Robert and Steven have more experience with the game logic end of this
 	public boolean isCellOccupied(int x, int y, String mapID) throws ParseException {
 
 		ParseObject currentMap;
@@ -120,7 +111,13 @@
 
 	}
 
-	//Updates the passed in Parse object and saves it on the Parse cloud
+	//Deletes the passed in Parse Object from Parse
+	public void delete(ParseObject deleteMe)
+	{
+		deleteMe.deleteInBackground();
+	}
+
+	//Updates the passed in Parse object and saves it on Parse
 	public void update(ParseObject newPO)
 	{
 		newPO.saveInBackground();
